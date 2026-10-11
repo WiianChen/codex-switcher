@@ -55,7 +55,7 @@ pub fn switch_to_account(account: &StoredAccount) -> Result<()> {
 }
 
 /// Create an AuthDotJson structure from a StoredAccount
-fn create_auth_json(account: &StoredAccount) -> Result<AuthDotJson> {
+pub(crate) fn create_auth_json(account: &StoredAccount) -> Result<AuthDotJson> {
     match &account.auth_data {
         AuthData::ApiKey { key } => Ok(AuthDotJson {
             openai_api_key: Some(key.clone()),

@@ -59,6 +59,11 @@ pub async fn get_usage(app: tauri::AppHandle, account_id: String) -> Result<Usag
 /// For API key accounts this is a no-op.
 #[tauri::command]
 pub async fn refresh_account_metadata(account_id: String) -> Result<AccountInfo, String> {
+    if crate::nas::managed(&account_id).map_err(|e| e.to_string())? {
+        let store = load_accounts().map_err(|e| e.to_string())?;
+        let account = store.accounts.iter().find(|a| a.id == account_id).ok_or("Account not found")?;
+        return Ok(AccountInfo::from_stored(account, store.active_account_id.as_deref()));
+    }
     let account = get_account(&account_id)
         .map_err(|e| e.to_string())?
         .ok_or_else(|| format!("Account not found: {account_id}"))?;

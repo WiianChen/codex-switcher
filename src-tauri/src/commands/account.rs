@@ -154,6 +154,10 @@ pub async fn switch_account_by_id(account_id: &str) -> Result<(), String> {
 
     ensure_codex_not_running()?;
 
+    if crate::nas::switch_locked(account_id).await.map_err(|e| e.to_string())? {
+        return Ok(());
+    }
+
     // ChatGPT rotates single-use refresh tokens. Preserve the latest token
     // before replacing auth.json, otherwise switching back restores a stale one.
     if let Some(auth) = read_current_auth().map_err(|e| e.to_string())? {

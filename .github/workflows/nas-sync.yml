@@ -1,0 +1,39 @@
+name: NAS sync verification
+on:
+  push:
+    branches: [feat/nas-sync]
+  pull_request:
+    paths: ['nas-sync/**', 'src-tauri/**', 'src/**', '.github/workflows/nas-sync.yml']
+permissions:
+  contents: read
+jobs:
+  sync:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: nas-sync
+      - run: cargo test --locked --manifest-path nas-sync/Cargo.toml
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '11.25.0'
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm build
+      - run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib
