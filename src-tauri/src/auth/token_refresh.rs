@@ -37,6 +37,7 @@ struct TokenRefreshUpdate {
 /// Ensure the account has non-expired ChatGPT OAuth tokens.
 /// Returns an updated account when a refresh was performed.
 pub async fn ensure_chatgpt_tokens_fresh(account: &StoredAccount) -> Result<StoredAccount> {
+    crate::nas::require_local_refresh(&account.id)?;
     if !chatgpt_tokens_need_refresh(account) {
         return Ok(account.clone());
     }
@@ -49,6 +50,7 @@ pub async fn ensure_chatgpt_tokens_fresh(account: &StoredAccount) -> Result<Stor
 pub(crate) async fn ensure_chatgpt_tokens_fresh_locked(
     account: &StoredAccount,
 ) -> Result<StoredAccount> {
+    crate::nas::require_local_refresh(&account.id)?;
     if matches!(account.auth_data, AuthData::ApiKey { .. }) {
         return Ok(account.clone());
     }
@@ -84,6 +86,7 @@ pub async fn refresh_chatgpt_tokens(account: &StoredAccount) -> Result<StoredAcc
 }
 
 async fn refresh_chatgpt_tokens_locked(account: &StoredAccount) -> Result<StoredAccount> {
+    crate::nas::require_local_refresh(&account.id)?;
     let (current, is_active) = load_account_reconciling_live_auth(&account.id)?;
 
     if is_active && crate::commands::process::ensure_codex_not_running().is_err() {

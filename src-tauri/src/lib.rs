@@ -4,6 +4,7 @@ pub mod api;
 #[cfg(desktop)]
 pub mod app_menu;
 pub mod auth;
+pub mod nas;
 pub mod commands;
 #[cfg(desktop)]
 pub mod tray;
@@ -29,6 +30,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
+            nas::start();
             #[cfg(desktop)]
             {
                 app.handle()
@@ -60,6 +62,10 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            nas::nas_status,
+            nas::nas_pair,
+            nas::nas_import,
+            nas::nas_recover,
             commands::get_display_settings,
             commands::set_tray_display_mode,
             commands::open_codex_app,

@@ -3,6 +3,7 @@ import { useAccounts } from "./hooks/useAccounts";
 import { useDesktopReopen } from "./hooks/useDesktopReopen";
 import { useCodexClosePreference } from "./hooks/useCodexClosePreference";
 import { SettingsModal } from "./components/SettingsModal";
+import { NasSyncPanel } from "./components/NasSyncPanel";
 import { finishForceClose, type DesktopReopenPreference } from "./lib/desktopReopen";
 import type { CodexClosePreference } from "./lib/codexClosePreference";
 import { useForceCloseCodexProcesses } from "./hooks/useForceCloseCodexProcesses";
@@ -951,6 +952,10 @@ function App() {
       setAutoWarmupRunningIds((prev) => new Set(prev).add(accountId));
 
       try {
+        if (isTauriRuntime()) {
+          const nas = await invokeBackend<{mapping?: Record<string, string>}>("nas_status");
+          if (nas.mapping?.[accountId]) return;
+        }
         let freshUsage: UsageInfo;
         try {
           freshUsage = await refreshSingleUsage(accountId);
@@ -1034,7 +1039,9 @@ function App() {
       const warmedAt = Date.now();
       let warmed = 0;
       let failed = 0;
+      const nas = isTauriRuntime() ? await invokeBackend<{mapping?: Record<string, string>}>("nas_status") : {};
       for (const account of targets) {
+        if (nas.mapping?.[account.id]) continue;
         try {
           await warmupAccount(account.id);
           markSuccessfulWarmup(account.id, warmedAt);
@@ -1045,6 +1052,7 @@ function App() {
         }
       }
 
+      if (warmed === 0 && failed === 0) return;
       if (failed === 0) {
         showWarmupToast(
           `Timed warm-up sent for ${warmed} account${warmed === 1 ? "" : "s"}`
@@ -1729,6 +1737,7 @@ function App() {
 
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-6 pt-4 pb-8">
+        <NasSyncPanel accounts={accounts} />
         {loading && accounts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin h-10 w-10 border-2 border-gray-900 dark:border-gray-100 border-t-transparent rounded-full mb-4"></div>

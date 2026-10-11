@@ -66,6 +66,7 @@ struct AccountsCheckEntitlement {
 
 /// Get usage information for an account
 pub async fn get_account_usage(account: &StoredAccount) -> Result<UsageInfo> {
+    if let Some(usage) = crate::nas::cached_usage(account).await? { return Ok(usage); }
     match &account.auth_data {
         AuthData::ApiKey { .. } => Ok(UsageInfo {
             account_id: account.id.clone(),
@@ -87,6 +88,7 @@ pub async fn get_account_usage(account: &StoredAccount) -> Result<UsageInfo> {
 
 /// Send a minimal authenticated request to warm up account traffic paths.
 pub async fn warmup_account(account: &StoredAccount) -> Result<()> {
+    crate::nas::require_local_refresh(&account.id)?;
     match &account.auth_data {
         AuthData::ApiKey { key } => warmup_with_api_key(key).await,
         AuthData::ChatGPT { .. } => warmup_with_chatgpt_auth(account).await,
@@ -96,6 +98,9 @@ pub async fn warmup_account(account: &StoredAccount) -> Result<()> {
 pub async fn fetch_chatgpt_account_metadata(
     account: &StoredAccount,
 ) -> Result<ChatGptAccountMetadata> {
+    if crate::nas::managed(&account.id)? {
+        return Ok(ChatGptAccountMetadata { plan_type: account.plan_type.clone(), subscription_expires_at: account.subscription_expires_at });
+    }
     let (access_token, chatgpt_account_id) = extract_chatgpt_auth(account)?;
     let response =
         send_chatgpt_get_request(CHATGPT_ACCOUNTS_CHECK_API, access_token, chatgpt_account_id)

@@ -148,11 +148,16 @@ pub async fn switch_account_by_id(account_id: &str) -> Result<(), String> {
         .position(|account| account.id == account_id)
         .ok_or_else(|| format!("Account not found: {account_id}"))?;
 
-    if store.active_account_id.as_deref() == Some(account_id) {
+    if store.active_account_id.as_deref() == Some(account_id)
+        && !crate::nas::managed(account_id).map_err(|e| e.to_string())? {
         return Ok(());
     }
 
     ensure_codex_not_running()?;
+
+    if crate::nas::switch_locked(account_id).await.map_err(|e| e.to_string())? {
+        return Ok(());
+    }
 
     // ChatGPT rotates single-use refresh tokens. Preserve the latest token
     // before replacing auth.json, otherwise switching back restores a stale one.
