@@ -272,6 +272,15 @@ pub async fn switch_locked(target: &str) -> Result<bool> {
     if !c.pending.is_empty() {
         bail!("上次 NAS 切換尚未完成，請先恢復同步");
     }
+    if let Some(active) = store
+        .active_account_id
+        .as_ref()
+        .filter(|id| c.mapping.contains_key(*id))
+    {
+        if c.current.as_ref().map(|o| &o.local_id) != Some(active) {
+            bail!("目前帳號缺少可確認的 NAS 租約，已保留本機憑證；請先恢復同步");
+        }
+    }
     let hub = c
         .mapping
         .get(target)
@@ -282,6 +291,9 @@ pub async fn switch_locked(target: &str) -> Result<bool> {
         renew_owner(&nas, o).await?;
     }
     upload_current(&mut c, &nas).await?;
+    if c.current.as_ref().is_some_and(|o| o.local_id == target) {
+        return Ok(true);
+    }
     let account = store
         .accounts
         .iter()
